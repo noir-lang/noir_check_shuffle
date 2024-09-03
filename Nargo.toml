@@ -1,6 +1,6 @@
 [package]
 name = "noir_check_shuffle"
-type = "bin"
+type = "lib"
 authors = [""]
 compiler_version = ">=0.32.0"
 

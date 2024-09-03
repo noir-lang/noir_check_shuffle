@@ -1,4 +1,4 @@
-unconstrained fn get_shuffle_indices<T, let N: u32>(
+unconstrained fn __get_shuffle_indices<T, let N: u32>(
     lhs: [T; N],
     rhs: [T; N]
 ) -> [Field; N] where T: std::cmp::Eq {
@@ -8,7 +8,7 @@ unconstrained fn get_shuffle_indices<T, let N: u32>(
     for i in 0..N {
         let mut found = false;
         for j in 0..N {
-            if (shuffle_mask[j] == false) {
+            if ((shuffle_mask[j] == false) & (!found)) {
                 if (lhs[i] == rhs[j]) {
                     found = true;
                     shuffle_indices[i] = j as Field;
@@ -16,7 +16,7 @@ unconstrained fn get_shuffle_indices<T, let N: u32>(
                 }
             }
             if (found) {
-                break;
+                continue;
             }
         }
         assert(found == true, "check_shuffle, lhs and rhs arrays do not contain equivalent values");
@@ -25,25 +25,45 @@ unconstrained fn get_shuffle_indices<T, let N: u32>(
     shuffle_indices
 }
 
-// 10 = 192
-// 11 = 211
-global S = 7;
-fn main(x: [Field; S], y: [Field; S]) {
-    check_shuffle(x, y);
+unconstrained fn __get_index<let N: u32>(indices: [Field; N], idx: Field) -> Field {
+    let mut result = 0;
+    for i in 0..N {
+        if (indices[i] == idx) {
+            result = i as Field;
+            break;
+        }
+    }
+    result
 }
 
 pub fn check_shuffle<T, let N: u32>(lhs: [T; N], rhs: [T; N]) where T: std::cmp::Eq {
-    let shuffle_indices = get_shuffle_indices(lhs, rhs);
-    let mut index_masks: [Field; N] = [0; N];
+    let shuffle_indices = __get_shuffle_indices(lhs, rhs);
 
     for i in 0..N {
+        let idx = __get_index(shuffle_indices, i as Field);
+        assert_eq(shuffle_indices[idx], i as Field);
+    }
+    for i in 0..N {
         let idx = shuffle_indices[i];
-        assert_eq(index_masks[idx], 0);
-        index_masks[idx] = 1;
         let expected = rhs[idx];
         let result = lhs[i];
         assert_eq(expected, result);
     }
+}
+
+pub fn get_shuffle_indices<T, let N: u32>(lhs: [T; N], rhs: [T; N]) -> [Field; N] where T: std::cmp::Eq {
+    let shuffle_indices = __get_shuffle_indices(lhs, rhs);
+    for i in 0..N {
+        let idx = __get_index(shuffle_indices, i as Field);
+        assert_eq(shuffle_indices[idx], i as Field);
+    }
+    for i in 0..N {
+        let idx = shuffle_indices[i];
+        let expected = rhs[idx];
+        let result = lhs[i];
+        assert_eq(expected, result);
+    }
+    shuffle_indices
 }
 
 mod test {
