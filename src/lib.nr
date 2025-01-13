@@ -1,8 +1,8 @@
-unconstrained fn __get_shuffle_indices<T, let N: u32>(
-    lhs: [T; N],
-    rhs: [T; N]
-) -> [Field; N] where T: std::cmp::Eq {
-    let mut shuffle_indices: [Field;N ] = [0; N];
+unconstrained fn __get_shuffle_indices<T, let N: u32>(lhs: [T; N], rhs: [T; N]) -> [Field; N]
+where
+    T: std::cmp::Eq,
+{
+    let mut shuffle_indices: [Field; N] = [0; N];
 
     let mut shuffle_mask: [bool; N] = [false; N];
     for i in 0..N {
@@ -36,25 +36,35 @@ unconstrained fn __get_index<let N: u32>(indices: [Field; N], idx: Field) -> Fie
     result
 }
 
-pub fn check_shuffle<T, let N: u32>(lhs: [T; N], rhs: [T; N]) where T: std::cmp::Eq {
-    let shuffle_indices = __get_shuffle_indices(lhs, rhs);
+pub fn check_shuffle<T, let N: u32>(lhs: [T; N], rhs: [T; N])
+where
+    T: std::cmp::Eq,
+{
+    //@Safety: check the comments below
+    let shuffle_indices = unsafe { __get_shuffle_indices(lhs, rhs) };
 
     for i in 0..N {
-        let idx = __get_index(shuffle_indices, i as Field);
+        let idx = unsafe { __get_index(shuffle_indices, i as Field) };
+        // checks the relation between shuffle_indices and output of __get_index
         assert_eq(shuffle_indices[idx], i as Field);
     }
     for i in 0..N {
         let idx = shuffle_indices[i];
         let expected = rhs[idx];
         let result = lhs[i];
+        // checks the relation between shuffle_indices and the lhs, rhs inputs
         assert_eq(expected, result);
     }
 }
 
-pub fn get_shuffle_indices<T, let N: u32>(lhs: [T; N], rhs: [T; N]) -> [Field; N] where T: std::cmp::Eq {
-    let shuffle_indices = __get_shuffle_indices(lhs, rhs);
+pub fn get_shuffle_indices<T, let N: u32>(lhs: [T; N], rhs: [T; N]) -> [Field; N]
+where
+    T: std::cmp::Eq,
+{
+    //@Safety: as explained in check_shuffle function
+    let shuffle_indices = unsafe { __get_shuffle_indices(lhs, rhs) };
     for i in 0..N {
-        let idx = __get_index(shuffle_indices, i as Field);
+        let idx = unsafe { __get_index(shuffle_indices, i as Field) };
         assert_eq(shuffle_indices[idx], i as Field);
     }
     for i in 0..N {
@@ -70,7 +80,7 @@ mod test {
     struct CompoundStruct {
         a: bool,
         b: Field,
-        c: u64
+        c: u64,
     }
     impl std::cmp::Eq for CompoundStruct {
         fn eq(self, other: Self) -> bool {
@@ -114,15 +124,22 @@ mod test {
             CompoundStruct { a: false, b: -100, c: 54321 },
             CompoundStruct { a: true, b: 5, c: 0xffffffffffffffff },
             CompoundStruct { a: true, b: 9814, c: 0xeeffee0011001133 },
-            CompoundStruct { a: false, b: 0x155, c: 0 }
+            CompoundStruct { a: false, b: 0x155, c: 0 },
         ];
         let rhs: [CompoundStruct; 5] = [
             CompoundStruct { a: false, b: 0x155, c: 0 },
             CompoundStruct { a: false, b: 0, c: 12345 },
             CompoundStruct { a: false, b: -100, c: 54321 },
             CompoundStruct { a: true, b: 9814, c: 0xeeffee0011001133 },
-            CompoundStruct { a: true, b: 5, c: 0xffffffffffffffff }
+            CompoundStruct { a: true, b: 5, c: 0xffffffffffffffff },
         ];
         check_shuffle(lhs, rhs);
     }
+}
+
+#[export]
+fn bench_test() {
+    let lhs: [Field; 5] = [0, 1, 2, 3, 4];
+    let rhs: [Field; 5] = [2, 0, 3, 1, 4];
+    check_shuffle(lhs, rhs);
 }
