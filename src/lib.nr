@@ -136,3 +136,10 @@ mod test {
         check_shuffle(lhs, rhs);
     }
 }
+
+#[export]
+fn bench_test() {
+    let lhs: [Field; 5] = [0, 1, 2, 3, 4];
+    let rhs: [Field; 5] = [2, 0, 3, 1, 4];
+    check_shuffle(lhs, rhs);
+}
