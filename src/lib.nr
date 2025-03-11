@@ -137,9 +137,10 @@ mod test {
     }
 }
 
-#[export]
-fn bench_test() {
-    let lhs: [Field; 5] = [0, 1, 2, 3, 4];
-    let rhs: [Field; 5] = [2, 0, 3, 1, 4];
-    check_shuffle(lhs, rhs);
+mod benchmark {
+    use crate::check_shuffle;
+    #[export]
+    fn bench_shuffle(lhs: [Field; 5], rhs: [Field; 5]) {
+        check_shuffle(lhs, rhs);
+    }
 }
