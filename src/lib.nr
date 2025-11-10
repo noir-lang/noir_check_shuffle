@@ -40,10 +40,11 @@ pub fn check_shuffle<T, let N: u32>(lhs: [T; N], rhs: [T; N])
 where
     T: std::cmp::Eq,
 {
-    //@Safety: check the comments below
+    //Safety: check the comments for assert_eq
     let shuffle_indices = unsafe { __get_shuffle_indices(lhs, rhs) };
 
     for i in 0..N {
+        //Safety: check the comments for assert_eq
         let idx = unsafe { __get_index(shuffle_indices, i) };
         // checks the relation between shuffle_indices and output of __get_index
         assert_eq(shuffle_indices[idx], i);
@@ -61,9 +62,10 @@ pub fn get_shuffle_indices<T, let N: u32>(lhs: [T; N], rhs: [T; N]) -> [u32; N]
 where
     T: std::cmp::Eq,
 {
-    //@Safety: as explained in check_shuffle function
+    //Safety: as explained in check_shuffle function
     let shuffle_indices = unsafe { __get_shuffle_indices(lhs, rhs) };
     for i in 0..N {
+        //Safety: assert shuffle_indices[idx] = i below
         let idx = unsafe { __get_index(shuffle_indices, i) };
         assert_eq(shuffle_indices[idx], i);
     }
@@ -89,11 +91,14 @@ mod test {
     }
 
     use crate::check_shuffle;
+    use crate::get_shuffle_indices;
+
     #[test]
     fn test_shuffle() {
         let lhs: [Field; 5] = [0, 1, 2, 3, 4];
         let rhs: [Field; 5] = [2, 0, 3, 1, 4];
         check_shuffle(lhs, rhs);
+        assert_eq(get_shuffle_indices(lhs, rhs), [1, 3, 0, 2, 4]);
     }
 
     #[test]
@@ -101,6 +106,7 @@ mod test {
         let lhs: [Field; 5] = [0, 1, 2, 3, 4];
         let rhs: [Field; 5] = [0, 1, 2, 3, 4];
         check_shuffle(lhs, rhs);
+        assert_eq(get_shuffle_indices(lhs, rhs), [0, 1, 2, 3, 4]);
     }
 
     #[test(should_fail_with = "check_shuffle, lhs and rhs arrays do not contain equivalent values")]
@@ -115,6 +121,20 @@ mod test {
         let lhs: [Field; 5] = [0, 1, 2, 3, 4];
         let rhs: [Field; 5] = [0, 1, 2, 3, 3];
         check_shuffle(lhs, rhs);
+    }
+
+    #[test(should_fail_with = "check_shuffle, lhs and rhs arrays do not contain equivalent values")]
+    fn test_get_shuffle_indices_fail() {
+        let lhs: [Field; 5] = [0, 1, 2, 3, 4];
+        let rhs: [Field; 5] = [0, 1, 2, 3, 5];
+        let _ = get_shuffle_indices(lhs, rhs);
+    }
+
+    #[test(should_fail_with = "check_shuffle, lhs and rhs arrays do not contain equivalent values")]
+    fn test_get_shuffle_indices_fail_duplicates() {
+        let lhs: [Field; 5] = [0, 1, 2, 3, 4];
+        let rhs: [Field; 5] = [0, 1, 2, 3, 3];
+        let _ = get_shuffle_indices(lhs, rhs);
     }
 
     #[test]
@@ -134,7 +154,28 @@ mod test {
             CompoundStruct { a: true, b: 5, c: 0xffffffffffffffff },
         ];
         check_shuffle(lhs, rhs);
+
+        assert_eq(get_shuffle_indices(lhs, rhs), [1, 2, 4, 3, 0]);
     }
+
+    #[test]
+    fn test_empty_arrays() {
+        let lhs: [Field; 0] = [];
+        let rhs: [Field; 0] = [];
+        check_shuffle(lhs, rhs);
+
+        assert_eq(get_shuffle_indices(lhs, rhs), [0; 0]);
+    }
+
+    #[test]
+    fn test_one_element_arrays() {
+        let lhs: [Field; 1] = [0];
+        let rhs: [Field; 1] = [0];
+        check_shuffle(lhs, rhs);
+
+        assert_eq(get_shuffle_indices(lhs, rhs), [0]);
+    }
+
 }
 
 mod benchmark {
